@@ -172,42 +172,46 @@ void hdump(unsigned char *buf,int len)
 
 int openport(char *port,speed_t speed)
 {
-	int fd;
+	int fd = -1;
 	struct termios my_termios;
 
+	errno = 0;
 	fd = open(port, O_RDWR | O_NOCTTY);
 
 	if (fd < 0)
 	{
 		printf("open error %d %s\n", errno, strerror(errno));
-		return(-1);
+		goto cleanup;
 	}
 
 	if (tcgetattr(fd, &my_termios))
 	{
 		printf("tcgetattr error %d %s\n", errno, strerror(errno));
-		return(-1);
+		goto cleanup;
 	}
 
 	if (tcflush(fd, TCIFLUSH))
 	{
 		printf("tcgetattr error %d %s\n", errno, strerror(errno));
-		return(-1);
+		goto cleanup;
 	}
 
-
-	my_termios.c_cflag =  CS8 |CREAD | CLOCAL | HUPCL;
+	my_termios.c_cflag =  CS8 | CREAD  | CLOCAL | HUPCL;
 	cfmakeraw(&my_termios);
-	cfsetospeed(&my_termios, speed);
-	if (	tcsetattr(fd, TCSANOW, &my_termios))
+	cfsetspeed(&my_termios, speed);
+	if (tcsetattr(fd, TCSANOW, &my_termios))
 	{
 		printf("tcsetattr error %d %s\n", errno, strerror(errno));
-		return(-1);
+		goto cleanup;
 	}
 
+cleanup:
+	if (errno != 0)
+	{
+		close(fd);
+	}
 
 	return(fd);
-
 }
 
 /* read with timeout */
